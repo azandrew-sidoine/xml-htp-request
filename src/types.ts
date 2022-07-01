@@ -45,7 +45,7 @@ export type Response = {
 };
 
 // Request headers object interface definition
-export type Requestheaders = HeadersInit;
+export type RequestHeaders = HeadersInit;
 
 // Request interceptor function definition
 type RequestInterceptor = (request: Request) => Request;
@@ -56,7 +56,7 @@ type ResponseInterceptor = <T>(response: Response) => T;
 // Request options object interface definitions
 export type RequestOptions = {
   // Defines request options used by the request client
-  headers?: Requestheaders;
+  headers?: RequestHeaders;
   timeout?: number;
   withCredentials?: boolean;
   responseType?: ResponseType;

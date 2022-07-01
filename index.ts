@@ -1,4 +1,3 @@
-import { useXMLHttpRequest } from './request';
 import './style.css';
 
 // const client = useXMLHttpRequest({
