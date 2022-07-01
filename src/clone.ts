@@ -2,8 +2,6 @@ type Clonable = { [index: string]: any } & {
   clone(properties?: { [prop: string]: any }): Clonable;
 };
 
-type ClonePropertiesType = <T>(source: T, properties: unknown) => T;
-
 function cloneProperties<T extends { [index: string]: any }>(
   source: T,
   properties?: Record<string, any>
@@ -21,16 +19,6 @@ function cloneProperties<T extends { [index: string]: any }>(
       defineProperty(source, key, source['clone'](properties[prop]));
       continue;
     }
-    setProperty(source, prop, properties[prop]);
-  }
-  return source;
-}
-
-function setProperties<T = object>(
-  source: T,
-  properties: { [index: string]: any }
-) {
-  for (const prop in properties) {
     setProperty(source, prop, properties[prop]);
   }
   return source;
@@ -78,7 +66,7 @@ function Clone(this: any, properties?: { [index: string]: any }) {
   cloneProperties(this, { ...source });
 }
 
-function createCloneable<T>(bluePrint: new () => T, args: any) {
+export function createCloneable<T>(bluePrint: new () => T, args: any) {
   const propertiesDescriptorsMap: PropertyDescriptorMap = {};
   for (const prop in args) {
     propertiesDescriptorsMap[prop] = {
