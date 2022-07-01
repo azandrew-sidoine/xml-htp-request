@@ -44,27 +44,40 @@ export function createCloneable<T = object>(
   object.prototype.constructor = (properties?: { [index: string]: any }) => {
     cloneProperties(this, { ...properties });
   };
-  console.log(object.hasOwnProperty('clone'));
   if (!object.hasOwnProperty('clone')) {
-    Object.defineProperty(blueprint, 'clone', {
-      value: (properties?: { [index: string]: any }) => {
-        const source = {};
-        const decomposed = { ...this };
-        for (const prop in decomposed) {
-          console.log(prop);
-          if (prop === 'url') {
-            console.log(decomposed[prop]);
-          }
-          if (prop in properties) {
-            continue;
-          }
-          source[prop] = decomposed[prop];
+    object.prototype.clone = (properties?: { [index: string]: any }) => {
+      const source = {};
+      const decomposed = { ...this };
+      for (const prop in decomposed) {
+        console.log(prop);
+        if (prop === 'url') {
+          console.log(decomposed[prop]);
         }
-        return setProperties(new blueprint({ ...properties }), { ...source });
-      },
-      writable: false,
-    });
+        if (prop in properties) {
+          continue;
+        }
+        source[prop] = decomposed[prop];
+      }
+      return setProperties(new blueprint({ ...properties }), { ...source });
+    };
+    // Object.defineProperty(object, 'clone', {
+    //   value: (properties?: { [index: string]: any }) => {
+    //     const source = {};
+    //     const decomposed = { ...this };
+    //     for (const prop in decomposed) {
+    //       console.log(prop);
+    //       if (prop === 'url') {
+    //         console.log(decomposed[prop]);
+    //       }
+    //       if (prop in properties) {
+    //         continue;
+    //       }
+    //       source[prop] = decomposed[prop];
+    //     }
+    //     return setProperties(new blueprint({ ...properties }), { ...source });
+    //   },
+    //   writable: false,
+    // });
   }
-  console.log(object);
   return object as T;
 }
