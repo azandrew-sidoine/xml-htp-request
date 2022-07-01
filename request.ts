@@ -1,3 +1,5 @@
+import { Request } from './types';
+
 const HTTP_HEADERS = [
   'A-IM',
   'Accept',
@@ -36,24 +38,6 @@ const HTTP_HEADERS = [
   'Warning',
 ];
 
-export type Request = {
-  method: string;
-  url: string;
-  options: RequestOptions;
-};
-
-export type Requestheaders = { [index: string]: any };
-
-export type RequestOptions = {
-  headers?: Requestheaders;
-  timeout?: number;
-  withCredentials?: boolean;
-  onProgress?: (e: ProgressEvent<XMLHttpRequestEventTarget>) => void;
-  onError?: (e: ProgressEvent<XMLHttpRequestEventTarget>) => void;
-  onTimeout: (event: ProgressEvent<XMLHttpRequestEventTarget>) => void;
-  body: FormData | Object | unknown;
-};
-
 /**
  * Creates an XML Http Request object from the Request object
  */
@@ -63,8 +47,12 @@ export function useXMLHttpRequest(request: Request) {
   // TODO: open the request
   xhr.open(request.method, request.url, true);
 
-  if (request.options?.withCredentials) {
-    xhr.withCredentials = !!request.options?.withCredentials;
+  if (request!.options!.responseType) {
+    xhr.responseType = request!.options.responseType;
+  }
+
+  if (request.options!.withCredentials) {
+    xhr.withCredentials = !!request.options!.withCredentials;
   }
 
   // TODO: Register to the load event
@@ -75,30 +63,30 @@ export function useXMLHttpRequest(request: Request) {
     }
   );
   // TODO: If request timeout
-  if (request.options?.timeout) {
-    xhr.timeout = request.options?.timeout;
+  if (request.options!.timeout) {
+    xhr.timeout = request.options!.timeout;
   }
 
   // TODO: Subscribe to timeout event
-  if (request.options?.onTimeout) {
+  if (request.options!.onTimeout) {
     xhr.addEventListener(
       'timeout',
       (event: ProgressEvent<XMLHttpRequestEventTarget>) =>
-        request.options.onTimeout(event)
+        request.options!.onTimeout(event)
     );
   }
 
   // TODO : Subscribe to error event
-  if (request.options?.onError) {
+  if (request.options!.onError) {
     xhr.addEventListener(
       'error',
       (event: ProgressEvent<XMLHttpRequestEventTarget>) =>
-        request.options.onError(event)
+        request.options!.onError(event)
     );
   }
 
   // TODO : Subscribe to progess event
-  if (request.options?.onProgress) {
+  if (request.options!.onProgress) {
     const progress = xhr.upload ? xhr.upload : xhr;
     progress.addEventListener(
       'progress',
@@ -115,7 +103,7 @@ export function useXMLHttpRequest(request: Request) {
   };
 
   // Merge headers
-  const headers = request.options?.headers
+  const headers = request.options!.headers
     ? { ...defaultHeaders, ...request.options.headers }
     : defaultHeaders;
 
