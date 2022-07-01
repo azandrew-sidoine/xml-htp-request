@@ -40,11 +40,11 @@ function middleware3(request: Clonable, next: NextFunction) {
 
 function createStack<T extends Clonable>(...interceptors: Interceptor<T>[]) {
   return (message: T, next: (message: T) => any) => {
-    const nextFunc = (_message: T) => _message.clone();
-    for (const interceptor of interceptors) {
-      message = interceptor(message, nextFunc);
-    }
-    return next(message);
+    const nextFunc = () => (_message: T) => _message.clone();
+    // for (const interceptor of interceptors) {
+    //   message = interceptor(message, nextFunc);
+    // }
+    // return next(message);
   };
 }
 
