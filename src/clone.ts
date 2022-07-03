@@ -1,4 +1,4 @@
-type Clonable = { [index: string]: any } & {
+export type Clonable = { [index: string]: any } & {
   clone(properties?: { [prop: string]: any }): Clonable;
 };
 
@@ -77,9 +77,8 @@ export function createCloneable<T>(bluePrint: new () => T, args: any) {
     };
   }
   const obj = Object.create(bluePrint, propertiesDescriptorsMap);
-  obj.prototype.constructor = Clone;
   const instance = new obj.prototype.constructor();
-  instance.constructor = Object;
+  instance.constructor = bluePrint;
   // Make every object to the properties parameter clonable
   for (const prop in args) {
     const value = args[prop];
@@ -97,29 +96,26 @@ export function createCloneable<T>(bluePrint: new () => T, args: any) {
   }
   Object.defineProperty(instance, 'clone', {
     value: (properties?: { [index: string]: any }) => {
-      // Make every object to the properties parameter clonable
+      const object$ = { ...instance };
       for (const prop in properties) {
         const value = properties[prop];
-        const typeofValue = typeof value;
-        if (typeofValue === 'function') {
+        const valueType = typeof value;
+        if (valueType === 'function') {
           continue;
         }
-        if (typeofValue === 'undefined' || value === null) {
+        if (valueType === 'undefined' || value === null) {
           continue;
         }
-        if (typeofValue === 'object') {
-          const tmp = instance[prop] || {};
-          console.log(prop, value.constructor, value.prototype?.constructor);
-          let valueClone = createCloneable(value.constructor ?? Object, value);
-          valueClone = valueClone.clone(tmp);
-          instance[prop] = valueClone;
+        if (valueType === 'object') {
+          object$[prop] = createCloneable(
+            value.constructor || Object,
+            value
+          ).clone(instance[prop] || {});
           continue;
         }
-        instance[prop] = value;
+        object$[prop] = value;
       }
-      // Now we clone each properties of the current object
-      // setProperties(instance, copy);
-      return instance;
+      return createCloneable(instance.constructor || Object, object$);
     },
   });
   return instance as Clonable;
