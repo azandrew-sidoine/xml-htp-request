@@ -6,6 +6,7 @@ import {
   NextFunction,
   RequestInterface,
   RequestType,
+  ResponseInterface,
 } from './types';
 import { URIHelper } from './url';
 import { arrayIncludes, toBinary, isValidHttpUrl, getHost } from './utils';
@@ -90,21 +91,27 @@ export function useXMLHttpRequest(request: RequestInterface) {
 
   // Merge headers
   const headers = { ...(request.options.headers ?? {}) };
-
-  // TODO : Use the default headers constant
   for (const header in headers) {
     xhr.setRequestHeader(header, headers[header]);
   }
   return xhr;
 }
 
-// Get all request headers
+// Get all request headers as dictionary data structure
 function getResponseHeaders(headers: string) {
-  return headers.split('\r\n').reduce((result, current) => {
-    let [name, value] = current.split(': ');
-    result[name] = value;
-    return result;
-  }, {});
+  const result: Record<string, any> = {};
+  for (const header of headers.split('\r\n')) {
+    let [name, value] = header.split(': ');
+    if (
+      name !== '' &&
+      typeof name !== 'undefined' &&
+      value !== null &&
+      typeof value !== 'undefined'
+    ) {
+      result[name] = value;
+    }
+  }
+  return result;
 }
 
 // Send the request using the provided client object
@@ -118,7 +125,6 @@ async function sendRequest(
   }
 
   if (request.body instanceof FormData) {
-    console.log('Sending Multipart request');
     return instance.send(request.body);
   }
 
@@ -144,6 +150,15 @@ async function sendRequest(
  */
 export function Request(request: RequestType) {
   return Cloneable(Object, { ...request }) as RequestInterface;
+}
+
+/**
+ * @description Creates a response object containing request response
+ */
+export function CreateResponse(response: ResponseInterface) {
+  return Cloneable(Object, { ...response }) as ResponseInterface & {
+    clone(properties: Partial<ResponseInterface>): ResponseInterface;
+  };
 }
 
 /**
@@ -205,7 +220,21 @@ export function useClient(host: string = undefined) {
           instance.addEventListener(
             'load',
             (event: ProgressEvent<XMLHttpRequestEventTarget>) => {
-              resolve(instance.response);
+              resolve(
+                CreateResponse({
+                  responseType: instance.responseType,
+                  responseText:
+                    instance.responseType === '' ||
+                    instance.responseType === 'text'
+                      ? instance.responseText
+                      : undefined,
+                  responseURL: instance.responseURL,
+                  response: instance.response,
+                  statusCode: instance.status,
+                  statusText: instance.statusText,
+                  headers: getResponseHeaders(instance.getAllResponseHeaders()),
+                })
+              );
               // Resolve promise
               console.log(event);
             }
@@ -219,7 +248,7 @@ export function useClient(host: string = undefined) {
                 if (typeof request.options?.onError === 'function') {
                   request.options!.onError(event);
                 }
-                reject(event);
+                reject(instance);
                 console.log(event);
               }
             );

@@ -16,13 +16,13 @@ const response = client.request(
           request = request.clone({
             options: {
               ...request.options,
-              headers: {
-                ...request.options.headers,
-                'x-authorization-client-id':
-                  '859782E1-9A2F-49A4-9D42-B59A78E520FB',
-                'x-authorization-client-secret':
-                  'wJa60mWPUK2W8AycfziCrWeMWSus4HLAoSV9cq2qb6FTMlmEudoItlbUHwdUw15peIXmF2b2q2LwCYSO0fvvgQ',
-              },
+              // headers: {
+              //   ...request.options.headers,
+              //   'x-authorization-client-id':
+              //     '859782E1-9A2F-49A4-9D42-B59A78E520FB',
+              //   'x-authorization-client-secret':
+              //     'wJa60mWPUK2W8AycfziCrWeMWSus4HLAoSV9cq2qb6FTMlmEudoItlbUHwdUw15peIXmF2b2q2LwCYSO0fvvgQ',
+              // },
             },
           });
           return next(request);

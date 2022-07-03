@@ -30,7 +30,10 @@ export type RequestType = {
   method: HTTPRequestMethods;
   url: string;
   options?: RequestOptions;
-  body: FormData | Record<string, string | File | FormDataEntryValue> | undefined;
+  body:
+    | FormData
+    | Record<string, string | File | FormDataEntryValue>
+    | undefined;
 };
 
 // Request object interface definition
@@ -41,11 +44,12 @@ export type RequestInterface = RequestType & {
 // Response object interface definitions
 export type ResponseInterface = {
   responseType: XMLHttpRequestResponseType;
-  responseText: string;
+  responseText?: string;
   responseURL: string;
-  response: ArrayBuffer | string | Blob | unknown;
+  response: ArrayBuffer | string | Blob | Document;
   statusCode: number;
   statusText: string;
+  headers: HeadersInit;
 };
 
 // Request headers object interface definition
