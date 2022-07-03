@@ -1,98 +1,33 @@
 import './style.css';
-import { Cloneable } from './src/clone';
-import { NextFunction, RequestInterface } from './src/types';
-import { usePipeline } from './src/interceptors';
-import { useClient, Request } from './src/request';
+import { RequestInterface, useClient, Request } from './src/public-api';
+import { NextFunction } from './src/types';
 
-// function middleware(
-//   request: RequestInterface,
-//   next: NextFunction<RequestInterface>
-// ) {
-//   request = request.clone({
-//     options: {
-//       headers: { 'Content-Type': 'application/json' },
-//     },
-//   });
-//   const response = next(request);
-//   return response;
-// }
-
-// function middleware2(
-//   request: RequestInterface,
-//   next: NextFunction<RequestInterface>
-// ) {
-//   request = request.clone({
-//     url: request.url?.replace('http://', 'https://'),
-//     options: {
-//       headers: { Authorization: 'Bearer <TOKEN>' },
-//     },
-//   });
-//   const response = next(request);
-//   return response;
-// }
-
-// function middleware3(
-//   request: RequestInterface,
-//   next: NextFunction<RequestInterface>
-// ) {
-//   request = request.clone({
-//     options: {
-//       responseType: 'blob',
-//     },
-//   });
-//   const response = next(request);
-//   return {
-//     ...response,
-//     responseText: 'Bad request',
-//   };
-// }
-
-// const original = Cloneable(Object as any as new () => RequestInterface, {
-//   url: 'http://localhost:8000',
-// });
-// console.log(
-//   usePipeline(
-//     middleware,
-//     middleware2,
-//     middleware3
-//   )(original, (request) => {
-//     const headers = {
-//       ...(request.options.headers || {}),
-//       ...{ Origin: request.url },
-//     };
-//     return {
-//       status: 422,
-//       options: {
-//         headers,
-//         responseType: 'blob',
-//       },
-//     };
-//   })
-// );
-
-// console.log(
-//   usePipeline()(original, (request: any) => {
-//     return {
-//       status: 422,
-//       options: {
-//         responseType: 'blob',
-//         headers: {
-//           Origin: request.url,
-//         },
-//       },
-//     };
-//   })
-// );
-
-const client = useClient();
+const client = useClient('https://auth.lik.tg/');
 const response = client.request(
   Request({
-    url: 'https://auth.lik.tg/api/v2',
-    method: 'GET',
+    url: 'api/v2/login',
+    method: 'POST',
     options: {
       headers: {
         'Content-Type': 'application/json',
       },
+      interceptors: [
+        (request, next: NextFunction<RequestInterface>) => {
+          request = request.clone({
+            options: {
+              ...request.options,
+              headers: {
+                ...request.options.headers,
+                'x-authorization-client-id':
+                  '859782E1-9A2F-49A4-9D42-B59A78E520FB',
+                'x-authorization-client-secret':
+                  'wJa60mWPUK2W8AycfziCrWeMWSus4HLAoSV9cq2qb6FTMlmEudoItlbUHwdUw15peIXmF2b2q2LwCYSO0fvvgQ',
+              },
+            },
+          });
+          return next(request);
+        },
+      ],
     },
     body: {
       username: 'azandrewdevelopper@gmail.com',
@@ -101,4 +36,6 @@ const response = client.request(
   })
 );
 
-response.then((res) => console.log(res)).catch((err) => console.log(err));
+response
+  .then((res) => console.log('Request response: ', res))
+  .catch((err) => console.log(err));

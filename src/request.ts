@@ -88,17 +88,8 @@ export function useXMLHttpRequest(request: RequestInterface) {
     );
   }
 
-  // Default headers to use when client does not provide a headers options
-  const defaultHeaders = {
-    Accept: 'application/json',
-    'Cache-Control': 'no-cache',
-    'X-Requested-With': 'XMLHttpRequest',
-  };
-
   // Merge headers
-  const headers = request.options!.headers
-    ? { ...defaultHeaders, ...request.options.headers }
-    : defaultHeaders;
+  const headers = { ...(request.options.headers ?? {}) };
 
   // TODO : Use the default headers constant
   for (const header in headers) {
@@ -123,7 +114,6 @@ async function sendRequest(
 ) {
   const headers = request.options?.headers || {};
   if (typeof request.body === 'undefined' || request.body === null) {
-    console.log('Sending GET request');
     return instance.send();
   }
 
@@ -132,21 +122,18 @@ async function sendRequest(
     return instance.send(request.body);
   }
 
-  if (headers['Content-type'].indexOf('application/json') !== -1) {
-    console.log('Sending request', JSON.stringify(request.body));
+  if (headers['content-type'].indexOf('application/json') !== -1) {
     return instance.send(JSON.stringify(request.body));
   }
-
-  if (headers['Content-type'].indexOf('multipart/form-data') !== -1) {
-    console.log('Sending binary request');
+  if (headers['content-type'].indexOf('multipart/form-data') !== -1) {
     const encoder = new FormDataRequestEncoder();
     instance.setRequestHeader(
-      'Content-Type',
+      'content-Type',
       'multipart/form-data; boundary=' + encoder.getBoundary()
     );
     return instance.send(toBinary(await encoder.encode(request.body)));
   }
-  const encoder = new RawEncoder(headers['Content-type'] || 'text/plain');
+  const encoder = new RawEncoder(headers['content-type'] || 'text/plain');
   return instance.send(encoder.encode(request.body) as string);
 }
 
@@ -178,19 +165,31 @@ export function useClient(host: string = undefined) {
           const url = !isValidHttpUrl(request.url)
             ? `${getHost(host ?? '')}/${request.url}`
             : request.url;
-          if (
-            arrayIncludes(
-              ['post', 'path', 'options'],
-              request.method?.toLocaleLowerCase() ?? ''
-            ) &&
-            request.body
-          ) {
-            request = request.clone({
-              url: URIHelper.buildSearchParams(url, request.body),
-            });
+          // Default headers to use when client does not provide a headers options
+          const defaultHeaders = {
+            accept: 'application/json',
+            'cache-control': 'no-cache',
+            'x-requested-with': 'XMLHttpRequest',
+          };
+          const headers = request.options?.headers ?? {};
+          for (const header in headers) {
+            defaultHeaders[header?.toLocaleLowerCase()] = headers[header];
           }
-          const response = next(request);
-          return response;
+          request = request.clone({
+            url:
+              !arrayIncludes(
+                ['post', 'path', 'options'],
+                request.method?.toLocaleLowerCase() ?? ''
+              ) && request.body
+                ? URIHelper.buildSearchParams(url, request.body)
+                : url,
+            options: {
+              ...(request.options ?? {}),
+              headers: defaultHeaders,
+              responseType: request?.options.responseType || 'json',
+            },
+          });
+          return next(request);
         }
       );
 
@@ -206,7 +205,7 @@ export function useClient(host: string = undefined) {
           instance.addEventListener(
             'load',
             (event: ProgressEvent<XMLHttpRequestEventTarget>) => {
-              resolve(event);
+              resolve(instance.response);
               // Resolve promise
               console.log(event);
             }

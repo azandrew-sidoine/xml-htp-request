@@ -48,20 +48,6 @@ function defineProperty(object_: object, prop: string, value: any) {
   });
 }
 
-function Clone(this: any, properties?: { [index: string]: any }) {
-  properties = properties || {};
-  const source: Record<string, any> = {};
-  // We do not clone functions definitions therefore we loop through
-  // object properties and remove the keys that are function before proceeeding
-  for (const prop in properties) {
-    if (typeof properties[prop] === 'function') {
-      continue;
-    }
-    source[prop] = properties[prop];
-  }
-  cloneProperties(this, { ...source });
-}
-
 export function Cloneable<T extends Object>(bluePrint: new () => T, args: any) {
   const propertiesDescriptorsMap: PropertyDescriptorMap = {};
   for (const prop in args) {
@@ -74,7 +60,6 @@ export function Cloneable<T extends Object>(bluePrint: new () => T, args: any) {
   }
   const obj = Object.create(bluePrint, propertiesDescriptorsMap);
   const instance = new obj.prototype.constructor();
-  instance.constructor = bluePrint;
   // Make every object to the properties parameter clonable
   for (const prop in args) {
     const value = args[prop];
