@@ -26,29 +26,33 @@ export type HTTPRequestMethods =
   | 'put'
   | 'patch';
 
-export type RequestType = {
+export type RequestInterface = {
   method: HTTPRequestMethods;
   url: string;
   options?: RequestOptions;
-  body:
-    | FormData
-    | Record<string, string | File | FormDataEntryValue>
-    | undefined;
+  body?: FormData | Record<string, string | File | FormDataEntryValue>;
 };
 
 // Request object interface definition
-export type RequestInterface = RequestType & {
+export type HttpRequest = RequestInterface & {
   clone(properties?: { [prop: string]: any }): any;
 };
 
 // Response object interface definitions
-export type ResponseInterface = {
+export type HttpResponse = {
   responseType: XMLHttpRequestResponseType;
-  responseText?: string;
-  responseURL: string;
+  url: string;
   response: ArrayBuffer | string | Blob | Document;
-  statusCode: number;
+  status: number;
   statusText: string;
+  headers: HeadersInit;
+};
+
+export type HttpErrorResponse = {
+  status: number;
+  statusText: string;
+  error: string | any;
+  url?: string;
   headers: HeadersInit;
 };
 
@@ -58,10 +62,18 @@ export type RequestHeaders = HeadersInit;
 // Pipelines types definitions
 export type NextFunction<T> = (
   request: T
-) => ResponseInterface | Record<string, any>;
+) => HttpResponse | Record<string, any>;
 
 // Request interceptor type definition
 export type Interceptor<T> = (message: T, next: NextFunction<T>) => any;
+
+// Progress object type
+export type HttpProgressEvent = {
+  type?: string;
+  loaded: number;
+  total: number;
+  percentCompleted: number;
+};
 
 // Request options object interface definitions
 export type RequestOptions = {
@@ -72,10 +84,19 @@ export type RequestOptions = {
   responseType?: ResponseType;
 
   // Request options methods for interacting with request
-  onProgress?: (e: ProgressEvent<XMLHttpRequestEventTarget>) => void;
-  onError?: (e: ProgressEvent<XMLHttpRequestEventTarget>) => void;
-  onTimeout?: (event: ProgressEvent<XMLHttpRequestEventTarget>) => void;
+  onProgress?: (e: HttpProgressEvent) => void;
+  onError?: (e: HttpErrorResponse) => void;
+  onTimeout?: () => void;
 
   // Interceptors options definitions
-  interceptors?: Interceptor<RequestInterface>[];
+  interceptors?: Interceptor<HttpRequest>[];
+};
+
+// Request backend provider interface definition
+export type HttpBackend = {
+  handle(request: HttpRequest): Promise<HttpResponse>;
+  getURL: () => string | undefined;
+  onProgess?: (event: ProgressEvent) => HttpProgressEvent;
+  onLoad: () => Promise<HttpResponse>;
+  onError: (event: ProgressEvent) => HttpErrorResponse;
 };

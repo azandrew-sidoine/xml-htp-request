@@ -77,11 +77,44 @@ export function isValidHttpUrl(uri: string) {
  *
  * @param url
  */
-export function getHost(url: string) {
+export function getHttpHost(url: string) {
   if (url) {
     const webURL = new URL(url);
     url = `${webURL.protocol}//${webURL.host}`;
     return `${`${url.endsWith('/') ? url.slice(0, -1) : url}`}`;
   }
   return url ?? '';
+}
+
+export function dataURItoBlob(dataURI: string) {
+  // convert base64 to raw binary data held in a string
+  // doesn't handle URLEncoded DataURIs - see SO answer #6850276 for code that does this
+  const bytes = atob(dataURI.split(',')[1]);
+
+  // separate out the mime component
+  const mime = dataURI.split(',')[0].split(':')[1].split(';')[0];
+
+  // write the bytes of the string to an ArrayBuffer
+  const buffer = new ArrayBuffer(bytes.length);
+
+  // create a view into the buffer
+  var binary = new Uint8Array(buffer);
+
+  // set the bytes of the buffer to the correct values
+  for (var i = 0; i < bytes.length; i++) {
+    binary[i] = bytes.charCodeAt(i);
+  }
+
+  // write the ArrayBuffer to a blob, and you're done
+  return new Blob([buffer], { type: mime });
+}
+
+/**
+ * @description Creates a javascript {@see File} object from the blob instance
+ */
+export function convertBlobToFile(blob: Blob, name: string) {
+  return new File([blob], name, {
+    type: blob.type,
+    lastModified: new Date().getTime(),
+  });
 }
