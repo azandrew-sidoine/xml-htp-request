@@ -1,3 +1,4 @@
+import { useRequestBackendController } from './controller';
 import { FormDataRequestEncoder, RawEncoder } from './encoders';
 import { CreateErrorResponse, CreateResponse } from './helpers';
 import {
@@ -5,6 +6,8 @@ import {
   HttpProgressEvent,
   HttpRequest,
   HttpResponse,
+  HeadersType,
+  HttpErrorResponse,
 } from './types';
 import { toBinary } from './utils';
 
@@ -43,7 +46,7 @@ function getResponseUrl(xhr: any): string | null {
  * @description Query for content-type header in the list
  * of user provided headers
  */
-function getContentType(headers: HeadersInit) {
+function getContentType(headers: HeadersType) {
   for (const header in headers) {
     if (header?.toLocaleLowerCase() === 'content-type') {
       return headers[header] as string;
@@ -52,6 +55,8 @@ function getContentType(headers: HeadersInit) {
   return 'application/json;charset=UTF-8';
 }
 
+// Reads & parse the Http response body
+// @internal
 function getResponseBody(responseType: string, body: any, ok: boolean) {
   if (responseType === 'json' && typeof body === 'string') {
     // Save the original body, before attempting XSSI prefix stripping.
@@ -113,7 +118,9 @@ async function sendRequest(instance: XMLHttpRequest, request: HttpRequest) {
   );
 }
 
-export function partialXhr(instance: XMLHttpRequest) {
+// Get partial properties of the {@see XMLHttpRequest} object
+// @internal
+function partialXhr(instance: XMLHttpRequest) {
   const status = instance.status;
   const statusText = instance.statusText;
   const url = getResponseUrl(instance);
@@ -123,8 +130,9 @@ export function partialXhr(instance: XMLHttpRequest) {
 
 /**
  * Creates an XML Http Request object from the Request object
+ * @internal
  */
-export function initXMLHttpRequest(xhr: XMLHttpRequest, request: HttpRequest) {
+function initXMLHttpRequest(xhr: XMLHttpRequest, request: HttpRequest) {
   // TODO: open the request
   xhr.open(request.method, request.url, true);
 
@@ -178,44 +186,93 @@ export function initXMLHttpRequest(xhr: XMLHttpRequest, request: HttpRequest) {
   return xhr;
 }
 
-function createInstance(url: string = undefined) {
+// Creates an instance of {@see HttpBackend} object
+// @internal
+function createInstance(host: string = undefined) {
   const backend = new Object();
+
+  // Defines the backend host property
   Object.defineProperty(backend, 'url', {
-    value: url,
+    value: host,
     writable: true,
     configurable: true,
     enumerable: true,
   });
+
+  // Defines the backend instance property
   Object.defineProperty(backend, 'instance', {
     value: new XMLHttpRequest(),
     writable: true,
     configurable: true,
     enumerable: true,
   });
-  Object.defineProperty(backend, 'getURL', {
+
+  // Defines the backend host property
+  Object.defineProperty(backend, 'host', {
     value: () => backend['url'],
   });
+
+  // Returns the constructed backed object
   return backend as Object & {
     instance: XMLHttpRequest;
   };
 }
 
+/**
+ * @description Provides an object for sending HTTP request using legacy
+ * {@see XMLHttpRequest} object
+ *
+ * ```js
+ * // Creates an {@see HttpBackend} instance for sending HTTP requesr
+ * const backend = useXhrBackend(<URL>);
+ *
+ * // To send an HTTP request
+ * const response = backend.handle({
+ *  url: '', // Override default request url or use path
+ *  method: 'POST',
+ *  options: {
+ *    headers: {
+ *      'Content-Type': 'application/json'
+ *    }
+ *  },
+ *  body: {
+ *    // Request body
+ *  }
+ * }); // Promise<HttpResponse>
+ * ```
+ *
+ */
 export function useXhrBackend(url: string = undefined) {
   const backend = createInstance(url) as any as {
     instance: XMLHttpRequest;
   } & HttpBackend;
 
+  // @internal
+  let errorHandler: (e: ProgressEvent) => Promise<HttpErrorResponse>;
+  //@internal
+  let finishHandler: () => Promise<HttpResponse>;
+  //@internal
+  let progressHandler: (e: ProgressEvent) => void;
+
   Object.defineProperty(backend, 'handle', {
     value: (message: HttpRequest) => {
       return new Promise<HttpResponse>((resolve, reject) => {
+        errorHandler = (
+          (callback: Function) => (e: ProgressEvent) =>
+            callback(backend.onError(e))
+        )(reject);
+        finishHandler = (
+          (callback: Function) => () =>
+            callback(backend.onLoad())
+        )(resolve);
+        progressHandler = (
+          (_request) => (e: ProgressEvent) =>
+            message.options?.onProgress(backend.onProgess(e))
+        )(message);
         backend.instance = initXMLHttpRequest(backend.instance, message);
-        backend.instance.addEventListener('load', () => {
-          resolve(backend.onLoad());
-        });
+        backend.instance.addEventListener('load', finishHandler);
         // When an HTTP Error Occurs
-        backend.instance.addEventListener('error', (e) => {
-          reject(backend.onError(e));
-        });
+        backend.instance.addEventListener('error', errorHandler);
         // Listen for progess event and call user registered
         // callback
         if (
@@ -296,5 +353,43 @@ export function useXhrBackend(url: string = undefined) {
     },
   });
 
+  Object.defineProperty(backend, 'abort', {
+    value: (req: HttpRequest) => {
+      // On a cancellation, remove all registered event listeners.
+      if (errorHandler) {
+        backend.instance.removeEventListener('error', errorHandler);
+        backend.instance.removeEventListener('abort', errorHandler);
+        backend.instance.removeEventListener('timeout', errorHandler);
+      }
+      if (finishHandler) {
+        backend.instance.removeEventListener('load', finishHandler);
+      }
+      if (req.options?.onProgress && progressHandler) {
+        backend.instance.removeEventListener('progress', progressHandler);
+        if (req.body !== null && backend.instance.upload) {
+          backend.instance.upload.removeEventListener(
+            'progress',
+            progressHandler
+          );
+        }
+      }
+      // Finally, abort the in-flight request.
+      if (backend.instance.readyState !== backend.instance.DONE) {
+        backend.instance.abort();
+      }
+    },
+  });
+
+  Object.defineProperty(backend, 'onDestroy', {
+    value: (request?: HttpRequest) => {
+      backend.abort(request);
+      backend.instance = undefined;
+    },
+  });
   return backend;
+}
+
+//Creates a backend controller on top the xhr client
+export function xhrBackendController(url: string) {
+  return useRequestBackendController(useXhrBackend(url));
 }

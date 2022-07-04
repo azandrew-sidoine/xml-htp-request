@@ -1,13 +1,13 @@
 export {
-  RequestInterface,
+  HttpRequest,
   RequestOptions,
-  ResponseInterface,
+  HttpResponse,
   HttpProgressEvent,
   Interceptor,
   NextFunction,
-  HttpErrorResponse
+  HttpErrorResponse,
 } from './types';
-export { useClient, Request } from './request';
+export { useClient } from './request';
 export { usePipeline } from './interceptors';
 export {
   convertBlobToFile,
@@ -15,3 +15,5 @@ export {
   isValidHttpUrl,
   getHttpHost,
 } from './utils';
+export { useRequestBackendController } from './controller';
+export { useXhrBackend, xhrBackendController } from './xhr';

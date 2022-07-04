@@ -1,3 +1,8 @@
+
+// Creates a cloneable instance of an object
+// The API is used by {@see HttpRequest} & {@see HttpResponse} to implement
+// a clone method that copy object properties instead of assingin them directly
+// @internal
 export function Cloneable<T extends Object>(bluePrint: new () => T, args: any) {
   const propertiesDescriptorsMap: PropertyDescriptorMap = {};
   for (const prop in args) {

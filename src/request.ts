@@ -5,54 +5,18 @@ import {
   HttpRequest,
   RequestInterface,
   HttpBackend,
+  HttpBackendController,
 } from './types';
 import { URIHelper } from './url';
 import { arrayIncludes, isValidHttpUrl, getHttpHost } from './utils';
 import { Request } from './helpers';
-
-const HTTP_HEADERS = [
-  'A-IM',
-  'Accept',
-  'Accept-Charset',
-  'Accept-Encoding',
-  'Accept-Language',
-  'Accept-Datetime',
-  'Access-Control-Request-Method',
-  'Access-Control-Request-Headers',
-  'Authorization',
-  'Cache-Control',
-  'Connection',
-  'Content-Length',
-  'Content-Type',
-  'Cookie',
-  'Date',
-  'Expect',
-  'Forwarded',
-  'From',
-  'Host',
-  'If-Match',
-  'If-Modified-Since',
-  'If-None-Match',
-  'If-Range',
-  'If-Unmodified-Since',
-  'Max-Forwards',
-  'Origin',
-  'Pragma',
-  'Proxy-Authorization',
-  'Range',
-  'Referer',
-  'TE',
-  'User-Agent',
-  'Upgrade',
-  'Via',
-  'Warning',
-];
+import { HttpResponse } from './public-api';
 
 /**
  * @description Creates a client object for making request
  */
 export function useClient(
-  backend: HttpBackend,
+  backend: HttpBackend | HttpBackendController<HttpRequest, HttpResponse>,
   interceptors: Interceptor<HttpRequest>[] = []
 ) {
   const client = new Object();
@@ -67,7 +31,7 @@ export function useClient(
       // request
       pipe.push((request: HttpRequest, next: NextFunction<HttpRequest>) => {
         const url = !isValidHttpUrl(request.url)
-          ? `${getHttpHost(backend.getURL() ?? '')}/${request.url}`
+          ? `${getHttpHost(backend.host() ?? '')}/${request.url}`
           : request.url;
         // Default headers to use when client does not provide a headers options
         const defaultHeaders = {

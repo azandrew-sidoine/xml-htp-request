@@ -1,15 +1,19 @@
 import './style.css';
-import { HttpRequest, useClient } from './src/public-api';
-import { NextFunction } from './src/types';
-import { convertBlobToFile, dataURItoBlob } from './src/utils';
+import {
+  HttpRequest,
+  useClient,
+  NextFunction,
+  convertBlobToFile,
+  dataURItoBlob,
+  xhrBackendController,
+} from './src/public-api';
 import { dataURI } from './constrants';
-import { useXhrBackend } from './src/xhr';
 
 const form = new FormData();
 form.append('username', 'azandrewdevelopper@gmail.com');
 form.append('password', 'homestead');
-const client = useClient(useXhrBackend('https://auth.lik.tg/'));
-const response = client
+const client = useClient(xhrBackendController('https://auth.lik.tg/'));
+client
   .request({
     url: 'api/v2/login',
     method: 'POST',
@@ -36,7 +40,7 @@ const response = client
         },
       ],
       onProgress: (event: any) => {
-        console.log(event);
+        // Handle progress event
       },
     },
     // body: {

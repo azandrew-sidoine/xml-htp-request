@@ -26,6 +26,8 @@ export type HTTPRequestMethods =
   | 'put'
   | 'patch';
 
+// Type definition of a request interface object
+// @internal
 export type RequestInterface = {
   method: HTTPRequestMethods;
   url: string;
@@ -39,25 +41,27 @@ export type HttpRequest = RequestInterface & {
 };
 
 // Response object interface definitions
+// @internal
 export type HttpResponse = {
   responseType: XMLHttpRequestResponseType;
   url: string;
   response: ArrayBuffer | string | Blob | Document;
   status: number;
   statusText: string;
-  headers: HeadersInit;
+  headers: HeadersType;
 };
 
+// Http Error Response type definition
 export type HttpErrorResponse = {
   status: number;
   statusText: string;
   error: string | any;
   url?: string;
-  headers: HeadersInit;
+  headers: HeadersType;
 };
 
 // Request headers object interface definition
-export type RequestHeaders = HeadersInit;
+export type HeadersType = HeadersInit;
 
 // Pipelines types definitions
 export type NextFunction<T> = (
@@ -78,14 +82,13 @@ export type HttpProgressEvent = {
 // Request options object interface definitions
 export type RequestOptions = {
   // Defines request options used by the request client
-  headers?: RequestHeaders;
+  headers?: HeadersType;
   timeout?: number;
   withCredentials?: boolean;
   responseType?: ResponseType;
 
   // Request options methods for interacting with request
   onProgress?: (e: HttpProgressEvent) => void;
-  onError?: (e: HttpErrorResponse) => void;
   onTimeout?: () => void;
 
   // Interceptors options definitions
@@ -94,9 +97,25 @@ export type RequestOptions = {
 
 // Request backend provider interface definition
 export type HttpBackend = {
+  // Handle Http Request and Request events
   handle(request: HttpRequest): Promise<HttpResponse>;
-  getURL: () => string | undefined;
+  host: () => string | undefined;
   onProgess?: (event: ProgressEvent) => HttpProgressEvent;
   onLoad: () => Promise<HttpResponse>;
   onError: (event: ProgressEvent) => HttpErrorResponse;
+
+  // Cleanup resources when get call
+  onDestroy?: (request?: HttpRequest) => void;
+  abort?: (request?: HttpRequest) => void;
+};
+
+// Http Request Controller type definition
+export type HttpBackendController<T, R> = Object & {
+  backend: HttpBackend;
+  // Cancel the currently ongoing request
+  cancel(request: T): () => void;
+  // Send the request
+  handle(request: T): Promise<R>;
+  // Returns the request URL
+  host: () => string | undefined;
 };
