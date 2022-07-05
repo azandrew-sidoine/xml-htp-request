@@ -6,7 +6,7 @@
 export function toBinary(content: string) {
   const length = content.length;
   const buffer = new Uint8Array(length);
-  for (var nIdx = 0; nIdx < length; nIdx++) {
+  for (let nIdx = 0; nIdx < length; nIdx++) {
     buffer[nIdx] = content.charCodeAt(nIdx) & 0xff;
   }
   return buffer;
@@ -18,21 +18,16 @@ export function arrayIncludes<T>(list: Array<T>, value: T) {
 }
 
 //
-export function arrayIndexOf<T>(
-  list: Array<T>,
-  value: T,
-  fromIndex: number = 0
-) {
+export function arrayIndexOf<T>(list: Array<T>, value: T, fromIndex = 0) {
   if (typeof list.indexOf === 'function') {
     return list.indexOf(value);
   }
-  (function (mathmax, matMin) {})(Math.max, Math.min);
   ('use strict');
   if (list === null || typeof list === 'undefined') {
     throw TypeError('Array.prototype.indexOf called on null or undefined');
   }
 
-  let length = list.length >>> 0;
+  const length = list.length >>> 0;
   let index = Math.min(fromIndex | 0, length);
   if (index >= length) {
     return -1;
@@ -64,7 +59,7 @@ export function arrayIndexOf<T>(
 
 export function isValidHttpUrl(uri: string) {
   try {
-    let url = new URL(uri);
+    const url = new URL(uri);
     return url.protocol === 'http:' || url.protocol === 'https:';
   } catch (_) {
     return false;
@@ -98,10 +93,10 @@ export function dataURItoBlob(dataURI: string) {
   const buffer = new ArrayBuffer(bytes.length);
 
   // create a view into the buffer
-  var binary = new Uint8Array(buffer);
+  const binary = new Uint8Array(buffer);
 
   // set the bytes of the buffer to the correct values
-  for (var i = 0; i < bytes.length; i++) {
+  for (let i = 0; i < bytes.length; i++) {
     binary[i] = bytes.charCodeAt(i);
   }
 

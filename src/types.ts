@@ -48,7 +48,7 @@ export type HttpResponse = {
   status: number;
   statusText: string;
   headers: HeadersType;
-  url: string|undefined;
+  url: string | undefined;
 };
 
 // Http Error Response type definition
@@ -100,9 +100,6 @@ export type HttpBackend = {
   // Handle Http Request and Request events
   handle(request: HttpRequest): Promise<HttpResponse>;
   host: () => string | undefined;
-  onProgess?: (event: ProgressEvent) => HttpProgressEvent;
-  onLoad: () => Promise<HttpResponse>;
-  onError: (event: ProgressEvent) => HttpErrorResponse;
 
   // Cleanup resources when get call
   onDestroy?: (request?: HttpRequest) => void;
@@ -110,7 +107,7 @@ export type HttpBackend = {
 };
 
 // Http Request Controller type definition
-export type HttpBackendController<T, R> = Object & {
+export type HttpBackendController<T, R> = Record<string, any> & {
   backend: HttpBackend;
   // Cancel the currently ongoing request
   cancel(request: T): () => void;

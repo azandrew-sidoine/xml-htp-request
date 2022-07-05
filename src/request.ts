@@ -6,11 +6,11 @@ import {
   RequestInterface,
   HttpBackend,
   HttpBackendController,
+  HttpResponse,
 } from './types';
 import { URIHelper } from './url';
 import { arrayIncludes, isValidHttpUrl, getHttpHost } from './utils';
 import { Request } from './helpers';
-import { HttpResponse } from './public-api';
 
 /**
  * @description Creates a client object for making request
@@ -34,14 +34,15 @@ export function useClient(
           ? `${getHttpHost(backend.host() ?? '')}/${request.url}`
           : request.url;
         // Default headers to use when client does not provide a headers options
-        const defaultHeaders = {
+        const defaultHeaders: Record<string, any> = {
           accept: 'application/json',
           'cache-control': 'no-cache',
           'x-requested-with': 'XMLHttpRequest',
         };
-        const headers = request.options?.headers ?? {};
+        const headers: Record<string, any> = request.options?.headers ?? {};
         for (const header in headers) {
-          defaultHeaders[header?.toLocaleLowerCase()] = headers[header];
+          const key = header.toLocaleLowerCase();
+          defaultHeaders[key] = headers[header];
         }
         const options = request.options ?? {};
         request = request.clone({
@@ -68,7 +69,7 @@ export function useClient(
     },
     writable: false,
   });
-  return client as Object & {
+  return client as Record<string, unknown> & {
     request: (message: RequestInterface) => Promise<Response>;
   };
 }

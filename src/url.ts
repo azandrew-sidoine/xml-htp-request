@@ -16,7 +16,7 @@ export class URIHelper {
   ) {
     return `${name}=${
       contentType === 'text/plain'
-        ? value.replace(/[\s\=\\]/g, '\\$&')
+        ? value.replace(/[\s=\\]/g, '\\$&')
         : encodeURIComponent(value)
     }`;
   }
@@ -24,15 +24,20 @@ export class URIHelper {
   // Build a uri query array from user provided object
   public static buildQuery(
     body: Record<string, FormDataEntryValue> | FormData,
-    contentType: string = 'text/plain'
+    contentType = 'text/plain'
   ) {
     const segments: string[] = [];
     if (body instanceof FormData) {
-      for (const [prop, value] of body.entries()) {
+      // for (const [prop, value] of (body as any).entries()) {
+      //   segments.push(
+      //     URIHelper.encodeText(prop, entryValue(value), contentType)
+      //   );
+      // }
+      body.forEach((value, prop) => {
         segments.push(
           URIHelper.encodeText(prop, entryValue(value), contentType)
         );
-      }
+      });
     } else {
       for (const prop in body) {
         segments.push(
@@ -47,7 +52,7 @@ export class URIHelper {
   public static buildSearchParams(
     url: string,
     body: Record<string, FormDataEntryValue> | FormData,
-    contentType: string = 'text/plain'
+    contentType = 'text/plain'
   ) {
     const segments = URIHelper.buildQuery(body, contentType);
     return url.replace(

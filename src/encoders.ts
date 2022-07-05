@@ -63,7 +63,17 @@ export class FormDataRequestEncoder implements Encoder {
     // oAjaxReq.setRequestHeader("Content-Type", "multipart\/form-data; boundary=" + sBoundary);
     const segments: Promise<string>[] = [];
     if (body instanceof FormData) {
-      for (const [prop, value] of body.entries()) {
+      // TODO: Removed the commented code if tested successfully
+      // for (const [prop, value] of (body as any).entries()) {
+      //   segments.push(
+      //     typeof value === 'string'
+      //       ? new Promise((resolve) => {
+      //           resolve(this.encodeText(prop, value));
+      //         })
+      //       : this.encodeBlob(prop, value.name, value)
+      //   );
+      // }
+      body.forEach((value, prop) => {
         segments.push(
           typeof value === 'string'
             ? new Promise((resolve) => {
@@ -71,7 +81,7 @@ export class FormDataRequestEncoder implements Encoder {
               })
             : this.encodeBlob(prop, value.name, value)
         );
-      }
+      });
     } else {
       for (const prop in body) {
         const value = body[prop];

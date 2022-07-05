@@ -15,7 +15,7 @@ import { toBinary } from './utils';
 function getResponseHeaders(headers: string) {
   const result: Record<string, any> = {};
   for (const header of headers.split('\r\n')) {
-    let [name, value] = header.split(': ');
+    const [name, value] = header.split(': ');
     if (
       name !== '' &&
       typeof name !== 'undefined' &&
@@ -49,7 +49,7 @@ function getResponseUrl(xhr: any): string | null {
 function getContentType(headers: HeadersType) {
   for (const header in headers) {
     if (header?.toLocaleLowerCase() === 'content-type') {
-      return headers[header] as string;
+      return (headers as any)[header] as string;
     }
   }
   return 'application/json;charset=UTF-8';
@@ -140,11 +140,11 @@ function initXMLHttpRequest(xhr: XMLHttpRequest, request: HttpRequest) {
     xhr.responseType = request.options.responseType;
   }
 
-  if (request.options!.withCredentials) {
-    xhr.withCredentials = !!request.options!.withCredentials;
+  if (request.options?.withCredentials) {
+    xhr.withCredentials = !!request.options?.withCredentials;
   }
-  if (request.options!.timeout) {
-    xhr.timeout = request.options!.timeout;
+  if (request.options?.timeout) {
+    xhr.timeout = request.options.timeout;
   }
 
   if (request.options?.onTimeout) {
@@ -160,7 +160,7 @@ function initXMLHttpRequest(xhr: XMLHttpRequest, request: HttpRequest) {
         event: ProgressEvent<XMLHttpRequestEventTarget>
       ) {
         if (event.lengthComputable && request.options?.onProgress) {
-          let percentCompleted = event['loaded'] / event['total'];
+          const percentCompleted = event['loaded'] / event['total'];
           request.options.onProgress({
             type: event.type,
             percentCompleted,
@@ -181,7 +181,7 @@ function initXMLHttpRequest(xhr: XMLHttpRequest, request: HttpRequest) {
     if (header?.toLocaleLowerCase() === 'content-type') {
       continue;
     }
-    xhr.setRequestHeader(header, headers[header]);
+    xhr.setRequestHeader(header, (headers as any)[header]);
   }
   return xhr;
 }
@@ -209,11 +209,11 @@ function createInstance(host?: string) {
 
   // Defines the backend host property
   Object.defineProperty(backend, 'host', {
-    value: () => backend['url'],
+    value: () => (backend as any)['url'] as string,
   });
 
   // Returns the constructed backed object
-  return backend as Object & {
+  return backend as Record<string, any> & {
     instance: XMLHttpRequest;
   };
 }
@@ -245,6 +245,9 @@ function createInstance(host?: string) {
 export function useXhrBackend(url?: string) {
   const backend = createInstance(url) as any as {
     instance: XMLHttpRequest;
+    onProgess?: (event: ProgressEvent) => HttpProgressEvent;
+    onLoad: () => Promise<HttpResponse>;
+    onError: (event: ProgressEvent) => HttpErrorResponse;
   } & HttpBackend;
 
   // @internal
@@ -257,20 +260,22 @@ export function useXhrBackend(url?: string) {
   Object.defineProperty(backend, 'handle', {
     value: (message: HttpRequest) => {
       if (typeof backend.instance === 'undefined') {
-        throw new Error('Backend is undefined, cause by onDestroy() function call or unknow method call');
+        throw new Error(
+          'Backend is undefined, cause by onDestroy() function call or unknow method call'
+        );
       }
       return new Promise<HttpResponse>((resolve, reject) => {
         errorHandler = (
-          (callback: Function) => (e: ProgressEvent) =>
+          (callback: (event: HttpErrorResponse) => any) => (e: ProgressEvent) =>
             callback(backend.onError(e))
         )(reject);
         finishHandler = (
-          (callback: Function) => () =>
+          (callback: (event: Promise<HttpResponse>) => any) => () =>
             callback(backend.onLoad())
         )(resolve);
         progressHandler = ((_request) => (e: ProgressEvent) => {
-          if (message.options?.onProgress && backend.onProgess) {
-            message.options.onProgress(backend.onProgess(e));
+          if (_request.options?.onProgress && backend.onProgess) {
+            _request.options.onProgress(backend.onProgess(e));
           }
         })(message);
         backend.instance = initXMLHttpRequest(backend.instance, message);
@@ -294,7 +299,7 @@ export function useXhrBackend(url?: string) {
   Object.defineProperty(backend, 'onProgess', {
     value: (event: ProgressEvent<XMLHttpRequestEventTarget>) => {
       if (event.lengthComputable) {
-        let percentCompleted = event['loaded'] / event['total'];
+        const percentCompleted = event['loaded'] / event['total'];
         return {
           type: event.type,
           percentCompleted,
@@ -302,6 +307,13 @@ export function useXhrBackend(url?: string) {
           total: event['total'],
         } as HttpProgressEvent;
       }
+
+      return {
+        type: event.type,
+        percentCompleted: 0,
+        loaded: 0,
+        total: 0,
+      } as HttpProgressEvent;
     },
   });
 
@@ -311,8 +323,10 @@ export function useXhrBackend(url?: string) {
         typeof backend.instance.response === 'undefined'
           ? backend.instance.responseText
           : backend.instance.response;
-      let { status, statusText, url, headers } = partialXhr(backend.instance);
-      status = status === 0 ? (!!_body ? 200 : 0) : status;
+      const partial = partialXhr(backend.instance);
+      const { statusText, url, headers } = partial;
+      let { status } = partial;
+      status = status === 0 ? (_body ? 200 : 0) : status;
       const [body, ok] = getResponseBody(
         backend.instance.responseType,
         _body,
@@ -340,7 +354,7 @@ export function useXhrBackend(url?: string) {
   });
 
   Object.defineProperty(backend, 'onError', {
-    value: (event: ProgressEvent) => {
+    value: () => {
       const { status, statusText, url, headers } = partialXhr(backend.instance);
       return CreateErrorResponse({
         error: ProgressEvent,
