@@ -136,8 +136,8 @@ function initXMLHttpRequest(xhr: XMLHttpRequest, request: HttpRequest) {
   // TODO: open the request
   xhr.open(request.method, request.url, true);
 
-  if (request!.options!.responseType) {
-    xhr.responseType = request!.options.responseType;
+  if (request.options?.responseType) {
+    xhr.responseType = request.options.responseType;
   }
 
   if (request.options!.withCredentials) {
@@ -147,8 +147,8 @@ function initXMLHttpRequest(xhr: XMLHttpRequest, request: HttpRequest) {
     xhr.timeout = request.options!.timeout;
   }
 
-  if (request.options!.onTimeout) {
-    xhr.addEventListener('timeout', () => request.options!.onTimeout());
+  if (request.options?.onTimeout) {
+    xhr.addEventListener('timeout', request.options?.onTimeout);
   }
 
   if (request.options?.onProgress) {
@@ -159,7 +159,7 @@ function initXMLHttpRequest(xhr: XMLHttpRequest, request: HttpRequest) {
         this: XMLHttpRequestUpload,
         event: ProgressEvent<XMLHttpRequestEventTarget>
       ) {
-        if (event.lengthComputable) {
+        if (event.lengthComputable && request.options?.onProgress) {
           let percentCompleted = event['loaded'] / event['total'];
           request.options.onProgress({
             type: event.type,
@@ -174,7 +174,7 @@ function initXMLHttpRequest(xhr: XMLHttpRequest, request: HttpRequest) {
   }
 
   // Merge headers
-  const headers = { ...(request.options.headers ?? {}) };
+  const headers = { ...(request.options?.headers ?? {}) };
   for (const header in headers) {
     // Here we escape the content-type header when setting request headers
     // as the content type header is set when sending the request
@@ -188,7 +188,7 @@ function initXMLHttpRequest(xhr: XMLHttpRequest, request: HttpRequest) {
 
 // Creates an instance of {@see HttpBackend} object
 // @internal
-function createInstance(host: string = undefined) {
+function createInstance(host?: string) {
   const backend = new Object();
 
   // Defines the backend host property
@@ -242,7 +242,7 @@ function createInstance(host: string = undefined) {
  * ```
  *
  */
-export function useXhrBackend(url: string = undefined) {
+export function useXhrBackend(url?: string) {
   const backend = createInstance(url) as any as {
     instance: XMLHttpRequest;
   } & HttpBackend;
@@ -256,6 +256,9 @@ export function useXhrBackend(url: string = undefined) {
 
   Object.defineProperty(backend, 'handle', {
     value: (message: HttpRequest) => {
+      if (typeof backend.instance === 'undefined') {
+        throw new Error('Backend is undefined, cause by onDestroy() function call or unknow method call');
+      }
       return new Promise<HttpResponse>((resolve, reject) => {
         errorHandler = (
           (callback: Function) => (e: ProgressEvent) =>
@@ -265,26 +268,22 @@ export function useXhrBackend(url: string = undefined) {
           (callback: Function) => () =>
             callback(backend.onLoad())
         )(resolve);
-        progressHandler = (
-          (_request) => (e: ProgressEvent) =>
-            message.options?.onProgress(backend.onProgess(e))
-        )(message);
+        progressHandler = ((_request) => (e: ProgressEvent) => {
+          if (message.options?.onProgress && backend.onProgess) {
+            message.options.onProgress(backend.onProgess(e));
+          }
+        })(message);
         backend.instance = initXMLHttpRequest(backend.instance, message);
         backend.instance.addEventListener('load', finishHandler);
         // When an HTTP Error Occurs
         backend.instance.addEventListener('error', errorHandler);
         // Listen for progess event and call user registered
         // callback
-        if (
-          typeof message.options?.onProgress === 'function' &&
-          message.options?.onProgress
-        ) {
+        if (typeof message.options?.onProgress === 'function') {
           const progress = backend.instance.upload
             ? backend.instance.upload
             : backend.instance;
-          progress.addEventListener('progress', (e) => {
-            message.options?.onProgress(backend.onProgess(e));
-          });
+          progress.addEventListener('progress', progressHandler);
         }
         // If the request body is an instance of FormData object,
         // we simply pass it to the send method for POST request
@@ -382,8 +381,10 @@ export function useXhrBackend(url: string = undefined) {
 
   Object.defineProperty(backend, 'onDestroy', {
     value: (request?: HttpRequest) => {
-      backend.abort(request);
-      backend.instance = undefined;
+      if (typeof backend.abort === 'function') {
+        backend.abort(request);
+      }
+      backend.instance = undefined as any;
     },
   });
   return backend;

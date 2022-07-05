@@ -55,7 +55,7 @@ export function useClient(
           options: {
             ...options,
             headers: defaultHeaders,
-            responseType: request?.options.responseType || 'json',
+            responseType: request.options?.responseType || 'json',
           },
         });
         return next(request);

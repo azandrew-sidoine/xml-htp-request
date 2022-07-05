@@ -10,7 +10,7 @@ export interface Encoder {
 //#region Form Data Encoder
 export class FormDataRequestEncoder implements Encoder {
   // Encoder boundary private property
-  private boundary: string = undefined;
+  private boundary!: string;
 
   public constructor() {
     this.boundary = this.createBoundary();
@@ -39,7 +39,7 @@ export class FormDataRequestEncoder implements Encoder {
         blob.type +
         '\r\n\r\n';
       reader.addEventListener('load', (e: ProgressEvent<FileReader>) => {
-        content += e.target.result + '\r\n';
+        content += e.target?.result + '\r\n';
         resolve(content);
       });
       reader.readAsBinaryString(blob);
@@ -100,16 +100,13 @@ export class FormDataRequestEncoder implements Encoder {
 
 //#region Raw Text encoder
 export class RawEncoder implements Encoder {
-  // Encoder content type
-  private contentType: string = undefined;
-
   // Creates an instance of the Request encoder
-  public constructor(contentType: string) {
-    this.contentType = contentType;
-  }
+  public constructor(private contentType: string) {}
 
   // Provides encoding implementation
-  encode(body: Record<string, FormDataEntry> | FormData): string | Promise<string> {
+  encode(
+    body: Record<string, FormDataEntry> | FormData
+  ): string | Promise<string> {
     return URIHelper.buildQuery(body, this.contentType).join(
       this.contentType === 'text/plain' ? '\r\n' : '&'
     );

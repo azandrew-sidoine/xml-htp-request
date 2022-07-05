@@ -27,7 +27,7 @@ client
             options: {
               ...request.options,
               headers: {
-                ...request.options.headers,
+                ...request.options?.headers,
                 'x-authorization-client-id':
                   '859782E1-9A2F-49A4-9D42-B59A78E520FB',
                 'x-authorization-client-secret':

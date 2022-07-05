@@ -26,7 +26,7 @@ export class URIHelper {
     body: Record<string, FormDataEntryValue> | FormData,
     contentType: string = 'text/plain'
   ) {
-    const segments = [];
+    const segments: string[] = [];
     if (body instanceof FormData) {
       for (const [prop, value] of body.entries()) {
         segments.push(

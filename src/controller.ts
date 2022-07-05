@@ -135,7 +135,12 @@ export function useRequestBackendController<T>(backend: HttpBackend) {
   // Register the cancel event
   if (typeof controller['addEventListener'] === 'function') {
     controller['addEventListener']('cancel', (req: HttpRequest) => {
-      controller.backend.abort(req);
+      if (
+        controller.backend &&
+        typeof controller.backend.abort === 'function'
+      ) {
+        controller.backend.abort(req);
+      }
     });
   }
 

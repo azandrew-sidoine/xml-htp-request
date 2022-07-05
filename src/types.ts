@@ -44,11 +44,11 @@ export type HttpRequest = RequestInterface & {
 // @internal
 export type HttpResponse = {
   responseType: XMLHttpRequestResponseType;
-  url: string;
   response: ArrayBuffer | string | Blob | Document;
   status: number;
   statusText: string;
   headers: HeadersType;
+  url: string|undefined;
 };
 
 // Http Error Response type definition

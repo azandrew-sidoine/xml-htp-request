@@ -7,7 +7,7 @@ import { Interceptor, NextFunction } from './types';
 export function usePipeline<T>(...pipeline: Interceptor<T>[]) {
   return (message: T, next: NextFunction<T>) => {
     const nextFunc = (_message: T, interceptor: Interceptor<T>) => {
-      return interceptor(_message, (request: T) => request);
+      return interceptor(_message, ((request: T) => request) as any);
     };
     const stack = [(request: T) => next(request)];
     if (pipeline.length === 0) {
