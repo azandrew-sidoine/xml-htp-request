@@ -6,8 +6,8 @@ import {
   convertBlobToFile,
   dataURItoBlob,
   xhrBackendController,
-} from './src/public-api';
-import { dataURI } from './constrants';
+} from './src';
+// import { dataURI } from './constrants';
 
 const form = new FormData();
 form.append('username', 'azandrewdevelopper@gmail.com');
