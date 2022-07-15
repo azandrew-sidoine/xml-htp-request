@@ -2,7 +2,7 @@
 export type FormDataEntry = File | string | FormDataEntryValue;
 
 // HTTP response object interface definition
-export type ResponseType =
+export type HttpResponseType =
   | 'arraybuffer'
   | 'text'
   | 'blob'
@@ -26,17 +26,22 @@ export type HTTPRequestMethods =
   | 'put'
   | 'patch';
 
+type RequestBody =
+  | FormData
+  | Record<string, string | File | FormDataEntryValue>
+  | Record<string, any>;
+
 // Type definition of a request interface object
 // @internal
 export type RequestInterface = {
   method: HTTPRequestMethods;
   url: string;
   options?: RequestOptions;
-  body?: FormData | Record<string, string | File | FormDataEntryValue>;
+  body?: RequestBody;
 };
 
 // Request object interface definition
-export type HttpRequest = RequestInterface & {
+export type HttpRequest = Required<RequestInterface> & {
   clone(properties?: { [prop: string]: any }): any;
 };
 
@@ -44,7 +49,8 @@ export type HttpRequest = RequestInterface & {
 // @internal
 export type HttpResponse = {
   responseType: XMLHttpRequestResponseType;
-  response: ArrayBuffer | string | Blob | Document;
+  response: ArrayBuffer | string | Blob | Document | ReadableStream;
+  ok: boolean;
   status: number;
   statusText: string;
   headers: HeadersType;
@@ -57,7 +63,7 @@ export type HttpErrorResponse = {
   statusText: string;
   error: string | any;
   url?: string;
-  headers: HeadersType;
+  headers?: HeadersType;
 };
 
 // Request headers object interface definition
@@ -85,7 +91,7 @@ export type RequestOptions = {
   headers?: HeadersType;
   timeout?: number;
   withCredentials?: boolean;
-  responseType?: ResponseType;
+  responseType?: HttpResponseType;
 
   // Request options methods for interacting with request
   onProgress?: (e: HttpProgressEvent) => void;
@@ -93,6 +99,12 @@ export type RequestOptions = {
 
   // Interceptors options definitions
   interceptors?: Interceptor<HttpRequest>[];
+
+  // Fetch specific options
+  keepalive?: boolean;
+  redirect?: 'error' | 'follow' | 'manual';
+  compress?: boolean;
+  referrerPolicy?: string;
 };
 
 // Request backend provider interface definition
@@ -108,9 +120,10 @@ export type HttpBackend = {
 
 // Http Request Controller type definition
 export type HttpBackendController<T, R> = Record<string, any> & {
+  aborted: boolean;
   backend: HttpBackend;
   // Cancel the currently ongoing request
-  cancel(request: T): () => void;
+  abort(request: T): () => void;
   // Send the request
   handle(request: T): Promise<R>;
   // Returns the request URL

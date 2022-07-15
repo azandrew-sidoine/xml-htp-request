@@ -1,7 +1,6 @@
-import { usePipeline } from './interceptors';
+import { defaultInterceptor, usePipeline } from './interceptors';
 import {
   Interceptor,
-  NextFunction,
   HttpRequest,
   RequestInterface,
   HttpBackend,
@@ -21,7 +20,59 @@ export function useClient(
 ) {
   const client = new Object();
   Object.defineProperty(client, 'request', {
-    value: (request: RequestInterface) => {
+    value: (req?: RequestInterface | string) => {
+      //#region : Added support for empty|empty request parameter to send GET request by default
+      let request!: RequestInterface;
+      if (typeof req === 'undefined' || req === null) {
+        request = {
+          url: '/',
+          method: 'GET',
+        };
+      } else if (typeof req === 'string') {
+        request = {
+          url: req as string,
+          method: 'GET',
+        };
+      } else {
+        request = req as RequestInterface;
+      }
+
+      const requestHost = backend.host();
+      // Validate the Host URL if isset before proceeding
+      if (
+        typeof requestHost !== 'undefined' &&
+        requestHost !== null &&
+        !isValidHttpUrl(requestHost)
+      ) {
+        return new Promise(() => {
+          throw new TypeError('Invalid URL');
+        });
+      }
+      let url = !isValidHttpUrl(request.url)
+        ? `${getHttpHost(backend.host() ?? '')}/${request.url}`
+        : request.url;
+
+      // Validate the request URL before proceeding
+      if (!isValidHttpUrl(url)) {
+        return new Promise(() => {
+          throw new TypeError('Invalid URL');
+        });
+      }
+      //#region For GET request, we add search parameters to the request url
+      const notIsPostRequest = !arrayIncludes(
+        ['post', 'path', 'options'],
+        request.method?.toLocaleLowerCase() ?? ''
+      );
+      url =
+        notIsPostRequest && request.body
+          ? URIHelper.buildSearchParams(url, request.body)
+          : url;
+      // Then set the request body to null|undefined
+      if (notIsPostRequest) {
+        request = { ...request, body: undefined };
+      }
+      //#region For GET request, we add search parameters to the request url
+      //#endregion : Added support for empty|empty request parameter to send GET request by default
       let pipe =
         request.options?.interceptors || ([] as Interceptor<HttpRequest>[]);
       if (Array.isArray(interceptors) && interceptors.length > 0) {
@@ -29,39 +80,8 @@ export function useClient(
       }
       // Push an interceptor that apply url search parameters if the request is a get
       // request
-      pipe.push((request: HttpRequest, next: NextFunction<HttpRequest>) => {
-        const url = !isValidHttpUrl(request.url)
-          ? `${getHttpHost(backend.host() ?? '')}/${request.url}`
-          : request.url;
-        // Default headers to use when client does not provide a headers options
-        const defaultHeaders: Record<string, any> = {
-          accept: 'application/json',
-          'cache-control': 'no-cache',
-          'x-requested-with': 'XMLHttpRequest',
-        };
-        const headers: Record<string, any> = request.options?.headers ?? {};
-        for (const header in headers) {
-          const key = header.toLocaleLowerCase();
-          defaultHeaders[key] = headers[header];
-        }
-        const options = request.options ?? {};
-        request = request.clone({
-          url:
-            !arrayIncludes(
-              ['post', 'path', 'options'],
-              request.method?.toLocaleLowerCase() ?? ''
-            ) && request.body
-              ? URIHelper.buildSearchParams(url, request.body)
-              : url,
-          options: {
-            ...options,
-            headers: defaultHeaders,
-            responseType: request.options?.responseType || 'json',
-          },
-        });
-        return next(request);
-      });
-      const _request = Request(request);
+      pipe.push(defaultInterceptor);
+      const _request = Request({ ...request, url });
       // Call the request pipeline function and invoke the actual request client instance send method
       return usePipeline(...pipe)(_request, (message) =>
         backend.handle(message)
@@ -70,6 +90,6 @@ export function useClient(
     writable: false,
   });
   return client as Record<string, unknown> & {
-    request: (message: RequestInterface) => Promise<Response>;
+    request: (message?: RequestInterface | string) => Promise<HttpResponse>;
   };
 }

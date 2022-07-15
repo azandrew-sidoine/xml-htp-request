@@ -1,12 +1,11 @@
 import { useRequestBackendController } from './controller';
 import { FormDataRequestEncoder, RawEncoder } from './encoders';
-import { CreateErrorResponse, CreateResponse } from './helpers';
+import { CreateErrorResponse, CreateResponse, getContentType } from './helpers';
 import {
   HttpBackend,
   HttpProgressEvent,
   HttpRequest,
   HttpResponse,
-  HeadersType,
   HttpErrorResponse,
 } from './types';
 import { toBinary } from './utils';
@@ -32,29 +31,15 @@ function getResponseHeaders(headers: string) {
  * Determine an appropriate URL for the response, by checking either
  * XMLHttpRequest.responseURL or the X-Request-URL header.
  */
-function getResponseUrl(xhr: any): string | null {
+function getResponseUrl(xhr: any) {
   if ('responseURL' in xhr && xhr.responseURL) {
     return xhr.responseURL;
   }
   if (/^X-Request-URL:/m.test(xhr.getAllResponseHeaders())) {
     return xhr.getResponseHeader('X-Request-URL');
   }
-  return null;
+  return undefined;
 }
-
-/**
- * @description Query for content-type header in the list
- * of user provided headers
- */
-function getContentType(headers: HeadersType) {
-  for (const header in headers) {
-    if (header?.toLocaleLowerCase() === 'content-type') {
-      return (headers as any)[header] as string;
-    }
-  }
-  return 'application/json;charset=UTF-8';
-}
-
 // Reads & parse the Http response body
 // @internal
 function getResponseBody(responseType: string, body: any, ok: boolean) {
@@ -86,7 +71,7 @@ function getResponseBody(responseType: string, body: any, ok: boolean) {
 
 // Send the request using the provided client object
 async function sendRequest(instance: XMLHttpRequest, request: HttpRequest) {
-  const contentType = getContentType(request.options?.headers || {});
+  const { contentType } = getContentType(request.options?.headers || {});
   if (typeof request.body === 'undefined' || request.body === null) {
     // Set the request header and send the request
     instance.setRequestHeader('content-type', contentType);
@@ -97,12 +82,20 @@ async function sendRequest(instance: XMLHttpRequest, request: HttpRequest) {
     return instance.send(request.body);
   }
 
-  if (contentType.indexOf('application/json') !== -1) {
+  if (
+    typeof contentType !== 'undefined' &&
+    contentType !== null &&
+    contentType.indexOf('application/json') !== -1
+  ) {
     instance.setRequestHeader('content-type', 'application/json;charset=UTF-8');
     return instance.send(JSON.stringify(request.body));
   }
 
-  if (contentType.indexOf('multipart/form-data') !== -1) {
+  if (
+    typeof contentType !== 'undefined' &&
+    contentType !== null &&
+    contentType.indexOf('multipart/form-data') !== -1
+  ) {
     const encoder = new FormDataRequestEncoder();
     instance.setRequestHeader(
       'content-type',
@@ -190,14 +183,7 @@ function initXMLHttpRequest(xhr: XMLHttpRequest, request: HttpRequest) {
 // @internal
 function createInstance(host?: string) {
   const backend = new Object();
-
-  // Defines the backend host property
-  Object.defineProperty(backend, 'url', {
-    value: host,
-    writable: true,
-    configurable: true,
-    enumerable: true,
-  });
+  const hostURL = host;
 
   // Defines the backend instance property
   Object.defineProperty(backend, 'instance', {
@@ -209,7 +195,7 @@ function createInstance(host?: string) {
 
   // Defines the backend host property
   Object.defineProperty(backend, 'host', {
-    value: () => (backend as any)['url'] as string,
+    value: () => hostURL as string,
   });
 
   // Returns the constructed backed object
@@ -337,6 +323,7 @@ export function useXhrBackend(url?: string) {
           response: body,
           responseType: backend.instance.responseType,
           headers,
+          ok,
           url: url || undefined,
           status: status,
           statusText: statusText || 'OK',
@@ -354,10 +341,10 @@ export function useXhrBackend(url?: string) {
   });
 
   Object.defineProperty(backend, 'onError', {
-    value: () => {
+    value: (e: ProgressEvent) => {
       const { status, statusText, url, headers } = partialXhr(backend.instance);
       return CreateErrorResponse({
-        error: ProgressEvent,
+        error: e,
         status: status,
         headers,
         statusText: statusText || 'Unknown Error',
@@ -405,6 +392,6 @@ export function useXhrBackend(url?: string) {
 }
 
 //Creates a backend controller on top the xhr client
-export function xhrBackendController(url: string) {
+export function xhrBackendController(url?: string) {
   return useRequestBackendController(useXhrBackend(url));
 }

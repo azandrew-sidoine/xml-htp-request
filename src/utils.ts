@@ -113,3 +113,35 @@ export function convertBlobToFile(blob: Blob, name: string) {
     lastModified: new Date().getTime(),
   });
 }
+
+/**
+ * Validate HTTP header name and value
+ * 
+ * @param name 
+ * @param value
+ * // @internal
+ */
+export function validateHeaderValue(name: string, value: string) {
+  if (/[^\t\u0020-\u007E\u0080-\u00FF]/.test(value)) {
+    const error = new TypeError(
+      `Invalid character in header content ["${name}"]`
+    );
+    Object.defineProperty(error, 'code', { value: 'ERR_INVALID_CHAR' });
+    throw error;
+  }
+}
+
+/**
+ * Validates HTTP header name
+ * 
+ * @param name 
+ */
+export function validateHeaderName(name: string) {
+  if (!/^[\^`\-\w!#$%&'*+.|~]+$/.test(name)) {
+    const error = new TypeError(
+      `Header name must be a valid HTTP token [${name}]`
+    );
+    Object.defineProperty(error, 'code', { value: 'ERR_INVALID_HTTP_TOKEN' });
+    throw error;
+  }
+}

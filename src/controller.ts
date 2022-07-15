@@ -111,10 +111,10 @@ export function useRequestBackendController<T>(backend: HttpBackend) {
   });
 
   //
-  Object.defineProperty(controller, 'cancel', {
+  Object.defineProperty(controller, 'abort', {
     value: (request: T) => {
-      if (typeof controller['emit'] === 'function') {
-        controller['emit']('cancel', request);
+      if (typeof controller.emit === 'function') {
+        controller.emit('abort', request);
       }
     },
   });
@@ -131,19 +131,23 @@ export function useRequestBackendController<T>(backend: HttpBackend) {
 
   // Set the controller backend
   controller.backend = backend;
+  controller.aborted = false;
 
   // Register the cancel event
   if (typeof controller['addEventListener'] === 'function') {
-    controller['addEventListener']('cancel', (req: HttpRequest) => {
+    controller['addEventListener']('abort', (req: HttpRequest) => {
+      if (controller.aborted) {
+        throw new Error('Cannot abort a request that was already aborted');
+      }
       if (
         controller.backend &&
         typeof controller.backend.abort === 'function'
       ) {
+        controller.aborted = true;
         controller.backend.abort(req);
       }
     });
   }
-
   // Returns the backend controller to be use to control
   // backend instance
   return controller;
